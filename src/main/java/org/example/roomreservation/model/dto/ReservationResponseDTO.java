@@ -1,0 +1,36 @@
+package org.example.roomreservation.model.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.example.roomreservation.model.entity.ReservationStatus;
+
+import java.time.LocalDateTime;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class ReservationResponseDTO {
+    private Integer id;
+
+    //room
+    private Long roomId;
+    private String roomName;
+    private Integer roomFloor;
+    //user
+    private Long userId;
+    private String userName;
+    private String userEmail;
+    //reservation
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
+    private Integer participants;
+    private String title;
+    private String description;
+    private ReservationStatus status;
+
+    private LocalDateTime createdAt;
+
+}
