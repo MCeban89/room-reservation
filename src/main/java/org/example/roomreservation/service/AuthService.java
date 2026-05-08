@@ -13,6 +13,9 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -71,5 +74,16 @@ public class AuthService {
                 .email(user.getEmail())
                 .role(user.getRole().name())
                 .build();
+    }
+
+    public List<AuthResponseDTO> getUsers(){
+        List<User> users = userRepository.findAll();
+
+        return users.stream().map(user -> AuthResponseDTO.builder()
+                .name(user.getName())
+                .email(user.getEmail())
+                .role(user.getRole().name())
+                .build())
+                .toList();
     }
 }

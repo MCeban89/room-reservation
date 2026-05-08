@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class RoomRequestDTO {
     @NotBlank
-    private String roomName;
+    private String name;
 
     @NotNull
     @Min(value = 1)

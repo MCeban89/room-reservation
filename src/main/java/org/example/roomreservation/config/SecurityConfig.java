@@ -38,6 +38,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
+                                .requestMatchers("/rooms","/rooms/{id}", "/auth/users","/reservations/all").hasRole("ADMIN")
                 .requestMatchers("/auth/**").permitAll()
                 .requestMatchers(
                         "/swagger-ui/**",

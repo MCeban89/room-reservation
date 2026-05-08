@@ -6,10 +6,9 @@ import org.example.roomreservation.model.dto.AuthRequestDTO;
 import org.example.roomreservation.model.dto.AuthResponseDTO;
 import org.example.roomreservation.model.dto.RegisterRequestDTO;
 import org.example.roomreservation.service.AuthService;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/auth")
@@ -28,5 +27,10 @@ public class AuthController {
     public AuthResponseDTO login(@Valid @RequestBody AuthRequestDTO authRequestDTO) {
         System.out.println("LOGIN HIT");
         return authService.login(authRequestDTO);
+    }
+
+    @GetMapping("/users")
+    public List<AuthResponseDTO> getUsers() {
+        return authService.getUsers();
     }
 }
