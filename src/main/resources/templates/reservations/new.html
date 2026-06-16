@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ro" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Rezervare nouă — RoomBook</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+    <style>
+        /* Preview ora end calculat automat */
+        .end-preview {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 6px 12px;
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            color: var(--text2);
+            font-family: 'DM Mono', monospace;
+            min-width: 120px;
+        }
+        .end-preview span { color: var(--accent); font-weight: 500; }
+    </style>
+</head>
+<body>
+
+<nav th:replace="~{fragments/navbar :: navbar('my-reservations')}"></nav>
+
+<main class="narrow">
+    <a th:href="@{/recommendations}" class="btn-back">← Înapoi la recomandări</a>
+
+    <div class="page-title" style="margin-bottom:4px;">
+        Rezervare <span>nouă</span>
+    </div>
+    <p class="page-subtitle" style="margin-bottom:32px;">Completează detaliile rezervării</p>
+
+    <!-- Eroare -->
+    <div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
+
+    <!-- Preview sala -->
+    <div class="card" style="margin-bottom:20px;">
+        <div class="card-title">Sala selectată</div>
+        <div class="room-preview">
+            <div>
+                <div class="room-preview-name" th:text="${room.name}">Sala Inovație</div>
+                <div class="room-preview-meta"
+                     th:text="'Etaj ' + ${room.floor} + ' · ' + ${room.capacity} + ' locuri'">
+                    Etaj 2 · 8 locuri
+                </div>
+            </div>
+            <div class="room-equipment">
+                <span class="equip-tag on" th:if="${room.hasProjector}">📽 Proiector</span>
+                <span class="equip-tag on" th:if="${room.hasWhiteboard}">📋 Whiteboard</span>
+                <span class="equip-tag on" th:if="${room.hasVideoConference}">📹 Video</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formular -->
+    <div class="card">
+        <div class="card-title">Detalii rezervare</div>
+
+        <form th:action="@{/reservations}" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" name="roomId" th:value="${room.id}"/>
+
+            <!-- Data -->
+            <div class="form-group">
+                <label class="form-label">Data</label>
+                <input type="date" name="date" id="date" class="form-control"
+                       th:value="${date}"
+                       th:min="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}"
+                       required/>
+            </div>
+
+            <!-- Ora start -->
+            <div class="form-group">
+                <label class="form-label">Ora start</label>
+                <select name="startHour" id="startHour" class="form-control"
+                        onchange="updateEndPreview()" required>
+                    <option value="">-- Selectează ora --</option>
+                    <option value="08:00" th:selected="${startHour == '08:00'}">08:00</option>
+                    <option value="08:30" th:selected="${startHour == '08:30'}">08:30</option>
+                    <option value="09:00" th:selected="${startHour == '09:00'}">09:00</option>
+                    <option value="09:30" th:selected="${startHour == '09:30'}">09:30</option>
+                    <option value="10:00" th:selected="${startHour == '10:00'}">10:00</option>
+                    <option value="10:30" th:selected="${startHour == '10:30'}">10:30</option>
+                    <option value="11:00" th:selected="${startHour == '11:00'}">11:00</option>
+                    <option value="11:30" th:selected="${startHour == '11:30'}">11:30</option>
+                    <option value="12:00" th:selected="${startHour == '12:00'}">12:00</option>
+                    <option value="12:30" th:selected="${startHour == '12:30'}">12:30</option>
+                    <option value="13:00" th:selected="${startHour == '13:00'}">13:00</option>
+                    <option value="13:30" th:selected="${startHour == '13:30'}">13:30</option>
+                    <option value="14:00" th:selected="${startHour == '14:00'}">14:00</option>
+                    <option value="14:30" th:selected="${startHour == '14:30'}">14:30</option>
+                    <option value="15:00" th:selected="${startHour == '15:00'}">15:00</option>
+                    <option value="15:30" th:selected="${startHour == '15:30'}">15:30</option>
+                    <option value="16:00" th:selected="${startHour == '16:00'}">16:00</option>
+                    <option value="16:30" th:selected="${startHour == '16:30'}">16:30</option>
+                    <option value="17:00" th:selected="${startHour == '17:00'}">17:00</option>
+                    <option value="17:30" th:selected="${startHour == '17:30'}">17:30</option>
+                </select>
+            </div>
+
+            <!-- Durata -->
+            <div class="form-group">
+                <label class="form-label">Durata</label>
+                <select name="duration" id="duration" class="form-control"
+                        onchange="updateEndPreview()" required>
+                    <option value="">-- Selectează durata --</option>
+                    <option value="15"  th:selected="${duration == '15'}">15 minute</option>
+                    <option value="30"  th:selected="${duration == '30'}">30 minute</option>
+                    <option value="60"  th:selected="${duration == '60'}">1 oră</option>
+                    <option value="90"  th:selected="${duration == '90'}">1 oră 30 minute</option>
+                    <option value="120" th:selected="${duration == '120'}">2 ore</option>
+                </select>
+            </div>
+
+            <!-- Preview ora end — calculat automat din JS -->
+            <div class="form-group">
+                <label class="form-label">Ora end (calculată automat)</label>
+                <div class="end-preview" id="endPreview">
+                    Selectează ora start și durata
+                </div>
+                <!-- Camp ascuns trimis la server -->
+                <input type="hidden" name="endHour" id="endHour" th:value="${endHour}"/>
+            </div>
+
+            <!-- Participanți -->
+            <div class="form-group">
+                <label class="form-label">Număr participanți</label>
+                <input type="number" name="participants" class="form-control"
+                       th:value="${participants}" min="1"
+                       th:max="${room.capacity}" required/>
+                <div class="form-hint"
+                     th:text="'Maxim ' + ${room.capacity} + ' participanți'"></div>
+            </div>
+
+            <!-- Titlu -->
+            <div class="form-group">
+                <label class="form-label">Titlu meeting (opțional)</label>
+                <input type="text" name="title" class="form-control"
+                       placeholder="ex: Daily standup, Code review..."/>
+            </div>
+
+            <!-- Observații -->
+            <div class="form-group">
+                <label class="form-label">Observații (opțional)</label>
+                <textarea name="notes" class="form-control" rows="3"
+                          placeholder="Orice detalii suplimentare..."></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block"
+                    onclick="return validateForm()">
+                Confirmă rezervarea
+            </button>
+        </form>
+    </div>
+</main>
+
+<script th:src="@{/js/recommendations.js}"></script>
+
+</body>
+</html>

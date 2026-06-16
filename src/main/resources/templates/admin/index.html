@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ro" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Admin — RoomBook</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+
+<nav th:replace="~{fragments/navbar :: navbar('admin')}"></nav>
+
+<main>
+
+    <!-- ── PAGE HEADER ── -->
+    <div class="page-header">
+        <div>
+            <div class="page-title">Panou <span>Admin</span></div>
+            <div class="page-subtitle">Gestionează utilizatori, săli și rezervări</div>
+        </div>
+        <a th:href="@{/rooms/add}" class="btn btn-primary">+ Adaugă sală</a>
+    </div>
+
+    <!-- ── FLASH MESSAGES ── -->
+    <div class="alert alert-success" th:if="${success}" th:text="${success}"></div>
+    <div class="alert alert-error"   th:if="${error}"   th:text="${error}"></div>
+
+    <!-- ── STAT CARDS ── -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">🏢</div>
+            <div class="stat-label">Săli active</div>
+            <div class="stat-value accent" th:text="${activeRooms}">0</div>
+            <div class="stat-sub">din <span th:text="${totalRooms}">0</span> total</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-label">Utilizatori</div>
+            <div class="stat-value" th:text="${totalUsers}">0</div>
+            <div class="stat-sub"><span th:text="${adminCount}">0</span> admini</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📅</div>
+            <div class="stat-label">Rezervări active</div>
+            <div class="stat-value success" th:text="${confirmedReservations}">0</div>
+            <div class="stat-sub">din <span th:text="${totalReservations}">0</span> total</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">❌</div>
+            <div class="stat-label">Anulate</div>
+            <div class="stat-value danger" th:text="${cancelledReservations}">0</div>
+            <div class="stat-sub">rezervări anulate</div>
+        </div>
+    </div>
+
+    <!-- ── TABS ── -->
+    <div class="admin-tabs">
+        <button class="admin-tab active" onclick="showTab('users', this)">Utilizatori</button>
+        <button class="admin-tab"        onclick="showTab('rooms', this)">Săli</button>
+        <button class="admin-tab"        onclick="showTab('reservations', this)">Toate rezervările</button>
+    </div>
+
+    <!-- ================================================================
+         TAB: UTILIZATORI
+         ================================================================ -->
+    <div id="tab-users">
+        <div class="section-header">
+            <div class="section-title">Utilizatori înregistrați</div>
+            <span class="badge badge-gray" th:text="${users.size()} + ' total'">0 total</span>
+        </div>
+
+        <div class="table-card" th:if="${!users.isEmpty()}">
+            <table>
+                <thead>
+                <tr>
+                    <th>Utilizator</th>
+                    <th>Email</th>
+                    <th>Rol</th>
+                    <th>Etaj</th>
+                    <th>Departament</th>
+                    <th>Status</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="user : ${users}">
+                    <td>
+                        <div class="user-cell">
+                            <!-- Inițiale avatar -->
+                            <div class="user-avatar"
+                                 th:text="${#strings.substring(user.name, 0, 1).toUpperCase()}">
+                                I
+                            </div>
+                            <div>
+                                <div class="td-name" th:text="${user.name}">Ion Popescu</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="td-time" th:text="${user.email}">ion@exemplu.ro</div>
+                    </td>
+                    <td>
+                            <span class="role-badge"
+                                  th:classappend="${user.role.name() == 'ADMIN'} ? ' role-admin' : ' role-user'"
+                                  th:text="${user.role.name()}">
+                                USER
+                            </span>
+                    </td>
+                    <td>
+                            <span th:if="${user.floor != null}"
+                                  class="td-time"
+                                  th:text="'Etaj ' + ${user.floor}">Etaj 2</span>
+                        <span th:if="${user.floor == null}" style="color:var(--text3)">—</span>
+                    </td>
+                    <td>
+                            <span th:if="${user.department != null}"
+                                  style="font-size:13px;color:var(--text2)"
+                                  th:text="${user.department}">IT</span>
+                        <span th:if="${user.department == null}" style="color:var(--text3)">—</span>
+                    </td>
+                    <td>
+                            <span class="badge"
+                                  th:classappend="${user.enabled} ? ' badge-green' : ' badge-red'"
+                                  th:text="${user.enabled} ? '● Activ' : '● Inactiv'">
+                                ● Activ
+                            </span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="empty" th:if="${users.isEmpty()}">
+            <div class="empty-icon">👥</div>
+            <div class="empty-title">Nu există utilizatori</div>
+        </div>
+    </div>
+
+    <!-- ================================================================
+         TAB: SĂLI
+         ================================================================ -->
+    <div id="tab-rooms" style="display:none">
+        <div class="section-header">
+            <div class="section-title">Toate sălile</div>
+            <a th:href="@{/rooms/add}" class="btn btn-primary btn-sm">+ Adaugă sală</a>
+        </div>
+
+        <div class="table-card" th:if="${!rooms.isEmpty()}">
+            <table>
+                <thead>
+                <tr>
+                    <th>Sală</th>
+                    <th>Capacitate</th>
+                    <th>Etaj</th>
+                    <th>Echipamente</th>
+                    <th>Status</th>
+                    <th>Acțiuni</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="room : ${rooms}">
+                    <td>
+                        <div class="td-name" th:text="${room.name}">Sala Inovație</div>
+                        <div class="td-sub"
+                             th:if="${room.description != null}"
+                             th:text="${room.description}">Descriere</div>
+                    </td>
+                    <td>
+                        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--text)"
+                             th:text="${room.capacity}">10</div>
+                        <div class="td-sub">locuri</div>
+                    </td>
+                    <td>
+                        <div class="td-time" th:text="'Etaj ' + ${room.floor}">Etaj 2</div>
+                    </td>
+                    <td>
+                        <div class="room-equipment">
+                                <span class="equip-tag"
+                                      th:classappend="${room.hasProjector} ? ' on'">📽</span>
+                            <span class="equip-tag"
+                                  th:classappend="${room.hasWhiteboard} ? ' on'">📋</span>
+                            <span class="equip-tag"
+                                  th:classappend="${room.hasVideoConference} ? ' on'">📹</span>
+                        </div>
+                    </td>
+                    <td>
+                            <span class="badge"
+                                  th:classappend="${room.active} ? ' badge-green' : ' badge-red'"
+                                  th:text="${room.active} ? '● Activă' : '● Inactivă'">
+                                ● Activă
+                            </span>
+                    </td>
+                    <td>
+                        <div style="display:flex;gap:6px;align-items:center">
+                            <a class="btn btn-secondary btn-sm"
+                               th:href="@{/rooms/{id}/edit(id=${room.id})}">Editează</a>
+                            <form th:action="@{/rooms/{id}/delete(id=${room.id})}"
+                                  method="post" style="display:inline">
+                                <input type="hidden"
+                                       th:name="${_csrf.parameterName}"
+                                       th:value="${_csrf.token}"/>
+                                <button type="submit" class="btn btn-danger btn-sm"
+                                        onclick="return confirm('Dezactivezi această sală?')">
+                                    Dezactivează
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="empty" th:if="${rooms.isEmpty()}">
+            <div class="empty-icon">🏢</div>
+            <div class="empty-title">Nu există săli</div>
+            <a th:href="@{/rooms/add}" class="btn btn-primary">Adaugă prima sală</a>
+        </div>
+    </div>
+
+    <!-- ================================================================
+         TAB: TOATE REZERVĂRILE
+         ================================================================ -->
+    <div id="tab-reservations" style="display:none">
+        <div class="section-header">
+            <div class="section-title">Toate rezervările</div>
+            <span class="badge badge-gray"
+                  th:text="${reservations.size()} + ' total'">0 total</span>
+        </div>
+
+        <div class="table-card" th:if="${!reservations.isEmpty()}">
+            <table>
+                <thead>
+                <tr>
+                    <th>Sală</th>
+                    <th>Utilizator</th>
+                    <th>Data</th>
+                    <th>Interval</th>
+                    <th>Participanți</th>
+                    <th>Status</th>
+                    <th>Acțiuni</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="res : ${reservations}">
+                    <td>
+                        <div class="td-name" th:text="${res.roomName}">Sala Inovație</div>
+                        <div class="td-sub" th:text="'Etaj ' + ${res.roomFloor}">Etaj 2</div>
+                    </td>
+                    <td>
+                        <div class="user-cell">
+                            <div class="user-avatar"
+                                 th:text="${#strings.substring(res.userName, 0, 1).toUpperCase()}">
+                                I
+                            </div>
+                            <div>
+                                <div style="font-size:13.5px;font-weight:500"
+                                     th:text="${res.userName}">Ion P.</div>
+                                <div class="td-sub" th:text="${res.userEmail}">ion@ro</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="td-time"
+                             th:text="${#temporals.format(res.startTime, 'dd MMM yyyy')}">
+                            01 Ian 2024
+                        </div>
+                    </td>
+                    <td>
+                        <div class="td-time"
+                             th:text="${#temporals.format(res.startTime, 'HH:mm')}
+                                          + ' → '
+                                          + ${#temporals.format(res.endTime, 'HH:mm')}">
+                            10:00 → 11:00
+                        </div>
+                    </td>
+                    <td>
+                        <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700"
+                             th:text="${res.participants}">5</div>
+                    </td>
+                    <td>
+                            <span class="badge badge-green"
+                                  th:if="${res.status.name() == 'CONFIRMED'}">● Confirmată</span>
+                        <span class="badge badge-red"
+                              th:if="${res.status.name() == 'CANCELLED'}">● Anulată</span>
+                    </td>
+                    <td>
+                        <form th:if="${res.status.name() == 'CONFIRMED'}"
+                              th:action="@{/reservations/{id}/cancel(id=${res.id})}"
+                              method="post">
+                            <input type="hidden"
+                                   th:name="${_csrf.parameterName}"
+                                   th:value="${_csrf.token}"/>
+                            <button type="submit" class="btn btn-danger btn-sm"
+                                    onclick="return confirm('Anulezi această rezervare?')">
+                                Anulează
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="empty" th:if="${reservations.isEmpty()}">
+            <div class="empty-icon">📅</div>
+            <div class="empty-title">Nu există rezervări</div>
+        </div>
+    </div>
+
+</main>
+
+<script>
+    function showTab(name, btn) {
+        // Ascunde toate tab-urile
+        ['users', 'rooms', 'reservations'].forEach(t => {
+            document.getElementById('tab-' + t).style.display = 'none';
+        });
+        // Afișează tab-ul selectat
+        document.getElementById('tab-' + name).style.display = '';
+        // Update clase butoane
+        document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
+</script>
+
+</body>
+</html>

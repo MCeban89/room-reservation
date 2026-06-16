@@ -1,7 +1,6 @@
 package org.example.roomreservation.config;
 
 import lombok.RequiredArgsConstructor;
-import org.example.roomreservation.security.JwtAuthFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -12,16 +11,10 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -29,65 +22,60 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthFilter jwtAuthFilter;
     private final UserDetailsService userDetailsService;
+
+    // NU mai avem JwtAuthFilter — Thymeleaf folosește sesiuni, nu JWT
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                // CSRF rămâne ACTIV pentru Thymeleaf — formularele HTML au nevoie de el
+                // Thymeleaf adaugă automat token-ul CSRF în formulare cu th:action
+                // Nu mai dezactivăm ca la REST
+
+                // Resurse statice — CSS, JS, imagini
                 .authorizeHttpRequests(auth -> auth
-                                .requestMatchers("/rooms","/rooms/{id}", "/auth/users","/reservations/all").hasRole("ADMIN")
-                .requestMatchers("/auth/**").permitAll()
-                .requestMatchers(
-                        "/swagger-ui/**",
-                        "/swagger-ui.html",
-                        "/api-docs/**"
-                ).permitAll()
-                .anyRequest().authenticated()
+                        .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
+
+                        // Pagini publice
+                        .requestMatchers("/auth/login", "/auth/register").permitAll()
+
+                        // Swagger — pentru prezentare la comisie
+                        .requestMatchers("/swagger-ui/**", "/api-docs/**").permitAll()
+
+                        // Doar ADMIN
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+
+                        // Orice altceva necesită autentificare
+                        .anyRequest().authenticated()
                 )
 
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                // Form login — Spring Security gestionează autentificarea automat
+                // Când userul trimite formularul, Spring verifică email + parolă
+                .formLogin(form -> form
+                        .loginPage("/auth/login")           // pagina noastră de login
+                        .loginProcessingUrl("/auth/login")  // URL-ul unde se trimite formularul
+                        .defaultSuccessUrl("/rooms", true) // după login merge la /rooms
+                        .failureUrl("/auth/login?error")    // după eșec merge înapoi cu ?error
+                        .permitAll()
                 )
 
-                .authenticationProvider(authenticationProvider())
+                // Logout
+                .logout(logout -> logout
+                        .logoutUrl("/auth/logout")
+                        .logoutSuccessUrl("/auth/login?logout")
+                        .permitAll()
+                )
 
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .authenticationProvider(authenticationProvider());
 
         return http.build();
-    }
-
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-
-        config.setAllowedOrigins(List.of(
-                "http://localhost:5173"
-        ));
-
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-
-        config.setAllowedHeaders(List.of("*"));
-
-        config.setAllowCredentials(true);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-
-        source.registerCorsConfiguration("/**", config);
-        return source;
     }
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
-
-
-        // Folosește BCrypt pentru a verifica parola
         provider.setPasswordEncoder(passwordEncoder());
-
         return provider;
     }
 

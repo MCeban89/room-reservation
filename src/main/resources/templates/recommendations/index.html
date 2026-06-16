@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ro" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Recomandări — RoomBook</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+
+<nav th:replace="~{fragments/navbar :: navbar('recommendations')}"></nav>
+
+<main>
+    <div class="page-title" style="margin-bottom:4px;">
+        Recomandări <span>inteligente</span>
+    </div>
+    <p class="page-subtitle" style="margin-bottom:32px;">
+        Algoritmul găsește sala potrivită bazat pe preferințele tale
+    </p>
+
+    <div class="layout-sidebar">
+
+        <!-- ── FORMULAR CĂUTARE ── -->
+        <div class="card">
+            <div class="card-title">Parametrii căutării</div>
+
+            <form th:action="@{/recommendations}" method="get">
+
+                <!-- Data -->
+                <div class="form-group">
+                    <label class="form-label">Data</label>
+                    <input type="date" name="date" id="date" class="form-control"
+                           th:value="${date}"
+                           th:min="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}"
+                           required/>
+                </div>
+
+                <!-- Ora start -->
+                <div class="form-group">
+                    <label class="form-label">Ora start</label>
+                    <select name="startHour" id="startHour" class="form-control"
+                            onchange="updateEndPreview()" required>
+                        <option value="">-- Selectează ora --</option>
+                        <option value="08:00" th:selected="${startHour == '08:00'}">08:00</option>
+                        <option value="08:30" th:selected="${startHour == '08:30'}">08:30</option>
+                        <option value="09:00" th:selected="${startHour == '09:00'}">09:00</option>
+                        <option value="09:30" th:selected="${startHour == '09:30'}">09:30</option>
+                        <option value="10:00" th:selected="${startHour == '10:00'}">10:00</option>
+                        <option value="10:30" th:selected="${startHour == '10:30'}">10:30</option>
+                        <option value="11:00" th:selected="${startHour == '11:00'}">11:00</option>
+                        <option value="11:30" th:selected="${startHour == '11:30'}">11:30</option>
+                        <option value="12:00" th:selected="${startHour == '12:00'}">12:00</option>
+                        <option value="12:30" th:selected="${startHour == '12:30'}">12:30</option>
+                        <option value="13:00" th:selected="${startHour == '13:00'}">13:00</option>
+                        <option value="13:30" th:selected="${startHour == '13:30'}">13:30</option>
+                        <option value="14:00" th:selected="${startHour == '14:00'}">14:00</option>
+                        <option value="14:30" th:selected="${startHour == '14:30'}">14:30</option>
+                        <option value="15:00" th:selected="${startHour == '15:00'}">15:00</option>
+                        <option value="15:30" th:selected="${startHour == '15:30'}">15:30</option>
+                        <option value="16:00" th:selected="${startHour == '16:00'}">16:00</option>
+                        <option value="16:30" th:selected="${startHour == '16:30'}">16:30</option>
+                        <option value="17:00" th:selected="${startHour == '17:00'}">17:00</option>
+                        <option value="17:30" th:selected="${startHour == '17:30'}">17:30</option>
+                    </select>
+                </div>
+
+                <!-- Durata -->
+                <div class="form-group">
+                    <label class="form-label">Durata</label>
+                    <select name="duration" id="duration" class="form-control"
+                            onchange="updateEndPreview()" required>
+                        <option value="">-- Selectează durata --</option>
+                        <option value="15"  th:selected="${duration == '15'}">15 minute</option>
+                        <option value="30"  th:selected="${duration == '30'}">30 minute</option>
+                        <option value="60"  th:selected="${duration == '60'}">1 oră</option>
+                        <option value="90"  th:selected="${duration == '90'}">1 oră 30 minute</option>
+                        <option value="120" th:selected="${duration == '120'}">2 ore</option>
+                    </select>
+                </div>
+
+                <!-- Preview ora end -->
+                <div class="form-group">
+                    <label class="form-label">Ora end (calculată automat)</label>
+                    <div class="end-preview" id="endPreview">
+                        Selectează ora start și durata
+                    </div>
+                    <input type="hidden" name="endHour" id="endHour" th:value="${endHour}"/>
+                </div>
+
+                <!-- Număr participanți -->
+                <div class="form-group">
+                    <label class="form-label">Număr participanți</label>
+                    <input type="number" name="participants" class="form-control"
+                           placeholder="5" min="1" th:value="${participants}" required/>
+                </div>
+
+                <!-- Echipamente -->
+                <div class="form-group">
+                    <label class="form-label">Echipamente necesare</label>
+                    <div class="check-group">
+                        <label class="check-item">
+                            <input type="checkbox" name="needsProjector" value="true"
+                                   th:checked="${needsProjector}"/>
+                            📽 Proiector
+                        </label>
+                        <label class="check-item">
+                            <input type="checkbox" name="needsWhiteboard" value="true"
+                                   th:checked="${needsWhiteboard}"/>
+                            📋 Whiteboard
+                        </label>
+                        <label class="check-item">
+                            <input type="checkbox" name="needsVideoConference" value="true"
+                                   th:checked="${needsVideoConference}"/>
+                            📹 Videoconferință
+                        </label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block"
+                        onclick="return validateForm()">
+                    ✦ Găsește recomandări
+                </button>
+            </form>
+        </div>
+
+        <!-- ── REZULTATE ── -->
+        <div>
+
+            <div class="placeholder" th:if="${recommendations == null and error == null}">
+                <div class="placeholder-icon">✦</div>
+                <div>
+                    Completează parametrii și apasă<br/>
+                    <strong style="color:var(--text);">Găsește recomandări</strong>
+                </div>
+            </div>
+
+            <div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
+
+            <div class="empty"
+                 th:if="${recommendations != null and recommendations.isEmpty()}">
+                <div class="empty-icon">😔</div>
+                <div class="empty-title">Nicio sală disponibilă</div>
+                <p>Încearcă un alt interval sau mai puțini participanți.</p>
+            </div>
+
+            <div class="rec-list"
+                 th:if="${recommendations != null and !recommendations.isEmpty()}">
+
+                <div class="rec-card"
+                     th:each="rec, iter : ${recommendations}"
+                     th:classappend="${iter.index == 0} ? ' top'">
+
+                    <div class="top-badge" th:if="${iter.index == 0}">✦ Recomandat</div>
+
+                    <div class="rec-name" th:text="${rec.roomName}">Sala Inovație</div>
+                    <div class="rec-meta"
+                         th:text="'Etaj ' + ${rec.floor} + ' · ' + ${rec.capacity} + ' locuri'">
+                        Etaj 2 · 8 locuri
+                    </div>
+
+                    <div class="score-row">
+                        <div>
+                            <div class="score-num" th:text="${rec.score}">85</div>
+                            <div class="score-label">puncte</div>
+                        </div>
+                        <div class="score-bar-wrap">
+                            <div class="score-bar"
+                                 th:style="'width:' + ${rec.score} + '%'"></div>
+                        </div>
+                    </div>
+
+                    <div class="room-equipment" style="margin-bottom:10px;">
+                        <span class="equip-tag" th:classappend="${rec.hasProjector} ? ' on'">
+                            📽 Proiector
+                        </span>
+                        <span class="equip-tag" th:classappend="${rec.hasWhiteboard} ? ' on'">
+                            📋 Whiteboard
+                        </span>
+                        <span class="equip-tag" th:classappend="${rec.hasVideoConference} ? ' on'">
+                            📹 Video
+                        </span>
+                    </div>
+
+                    <div class="reasons">
+                        <span th:each="reason : ${rec.reasons}"
+                              class="reason-tag"
+                              th:classappend="${reason.contains('Nu are')} ? ' reason-bad' : ' reason-good'"
+                              th:text="${reason}">
+                            Motiv
+                        </span>
+                    </div>
+
+                    <!-- Butonul transmite acum date, startHour, endHour, participants -->
+                    <a class="btn btn-primary btn-sm"
+                       th:href="@{/reservations/new(roomId=${rec.roomId},date=${date},startHour=${startHour},endHour=${endHour},participants=${participants})}">
+                        Rezervă această sală →
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<style>
+    .end-preview {
+        display: inline-block;
+        margin-top: 8px;
+        padding: 6px 12px;
+        background: var(--bg3);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        font-size: 13px;
+        color: var(--text2);
+        font-family: 'DM Mono', monospace;
+        min-width: 120px;
+    }
+    .end-preview span { color: var(--accent); font-weight: 500; }
+</style>
+
+<script th:src="@{/js/recommendations.js}"></script>
+
+</body>
+</html>

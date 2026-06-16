@@ -1,5 +1,6 @@
 package org.example.roomreservation.model.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -19,10 +20,13 @@ public class ReservationRequestDTO {
 
     @NotNull
     @Future(message = "Data de start trebuie să fie în viitor")
+    @JsonProperty("start")
     private LocalDateTime startTime;
 
     @NotNull
+    @JsonProperty("end")
     private LocalDateTime endTime;
+
 
     @NotNull
     @Min(value = 1, message = "Trebuie cel puțin 1 participant")

@@ -1,5 +1,6 @@
 package org.example.roomreservation.model.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,7 +25,10 @@ public class ReservationResponseDTO {
     private String userName;
     private String userEmail;
     //reservation
+    // În interiorul clasei ReservationResponseDTO.java
+    @JsonProperty("start")
     private LocalDateTime startTime;
+    @JsonProperty("end")
     private LocalDateTime endTime;
     private Integer participants;
     private String title;

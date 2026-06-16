@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ro" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Rezervările mele — RoomBook</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+
+<nav th:replace="~{fragments/navbar :: navbar('my-reservations')}"></nav>
+
+<main>
+    <div class="page-header">
+        <div>
+            <div class="page-title">Rezervările <span>mele</span></div>
+            <div class="page-subtitle"
+                 th:text="${reservations.size()} + ' rezervări'">0 rezervări</div>
+        </div>
+        <a th:href="@{/recommendations}" class="btn btn-primary">+ Rezervare nouă</a>
+    </div>
+
+    <!-- Mesaj succes după anulare -->
+    <div class="alert alert-success" th:if="${success}" th:text="${success}"></div>
+
+    <!-- Tabel rezervări -->
+    <div class="table-card" th:if="${!reservations.isEmpty()}">
+        <table>
+            <thead>
+            <tr>
+                <th>Sală</th>
+                <th>Data</th>
+                <th>Interval</th>
+                <th>Participanți</th>
+                <th>Titlu</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="res : ${reservations}">
+                <td>
+                    <div class="td-name" th:text="${res.roomName}">Sala Inovație</div>
+                    <div class="td-sub" th:text="'Etaj ' + ${res.roomFloor}">Etaj 2</div>
+                </td>
+                <td>
+                    <!-- #temporals — utilitar Thymeleaf pentru formatare date -->
+                    <div class="td-time"
+                         th:text="${#temporals.format(res.startTime, 'dd MMM yyyy')}">
+                        01 Ian 2024
+                    </div>
+                </td>
+                <td>
+                    <div class="td-time"
+                         th:text="${#temporals.format(res.startTime, 'HH:mm')}
+                                      + ' → '
+                                      + ${#temporals.format(res.endTime, 'HH:mm')}">
+                        10:00 → 11:00
+                    </div>
+                </td>
+                <td th:text="${res.participants} + ' pers.'">5 pers.</td>
+                <td>
+                    <span th:text="${res.title}" style="color:var(--text2);font-size:13px;">—</span>
+                </td>
+                <td>
+                        <span class="badge badge-green"
+                              th:if="${res.status.name() == 'CONFIRMED'}">● Confirmată</span>
+                    <span class="badge badge-red"
+                          th:if="${res.status.name() == 'CANCELLED'}">● Anulată</span>
+                    <span class="badge greem-green"
+                          th:if="${res.status.name() == 'ATTENDED'}">● CheckIn</span>
+                </td>
+                <td>
+                    <!-- Buton anulare — doar pentru rezervări confirmate -->
+                    <form th:if="${res.status.name() == 'CONFIRMED' or res.status.name() == 'ATTENDED'}"
+                          th:action="@{/reservations/{id}/cancel(id=${res.id})}"
+                          method="post">
+                        <input type="hidden" th:name="${_csrf.parameterName}"
+                               th:value="${_csrf.token}"/>
+                        <button type="submit" class="btn btn-danger btn-sm"
+                                onclick="return confirm('Anulezi rezervarea?')">
+                            Anulează
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Empty state -->
+    <div class="empty" th:if="${reservations.isEmpty()}">
+        <div class="empty-icon">📅</div>
+        <div class="empty-title">Nu ai rezervări</div>
+        <a th:href="@{/recommendations}" class="btn btn-primary">Fă prima rezervare</a>
+    </div>
+</main>
+
+</body>
+</html>

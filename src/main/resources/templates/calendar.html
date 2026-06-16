@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Rezervarea Salii</title>
+
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+
+<body>
+<nav th:replace="~{fragments/navbar :: navbar('my-reservations')}"></nav>
+
+<div id="calendar-container">
+    <div id="calendar"></div>
+</div>
+
+<div class="modal fade" id="reservationModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="reservationForm">
+                <div class="modal-header">
+                    <h5>Rezervare noua</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="alert alert-success d-none" id="modalSuccess"></div>
+                    <div class="alert alert-danger d-none" id="modalError"></div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="title">Nume meeting</label>
+                        <input id="title" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="participants">Numarul de participanti</label>
+                        <input id="participants" type="number" class="form-control" min="1" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="description">Descriere</label>
+                        <textarea id="description" class="form-control" rows="3"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label" for="start">Start</label>
+                            <input id="start" type="datetime-local" class="form-control">
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label" for="end">End</label>
+                            <input id="end" type="datetime-local" class="form-control">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuleaza</button>
+                    <button type="submit" class="btn btn-primary">Rezerveaza</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    document.addEventListener('DOMContentLoaded', function(){
+        const roomId = [[${roomId}]];
+
+        const modal = new bootstrap.Modal(document.getElementById('reservationModal'));
+        const modalSuccess = document.getElementById('modalSuccess');
+        const modalError = document.getElementById('modalError');
+
+        // CORECTAT: Managementul afișării mesajelor folosind d-none din Bootstrap
+        function showSuccess(msg) {
+            modalError.classList.add('d-none');
+            modalSuccess.textContent = msg;
+            modalSuccess.classList.remove('d-none');
+        }
+
+        function showError(msg) {
+            modalSuccess.classList.add('d-none');
+            modalError.textContent = msg;
+            modalError.classList.remove('d-none');
+        }
+
+        function clearMessages() {
+            modalSuccess.classList.add('d-none');
+            modalError.classList.add('d-none');
+            modalSuccess.textContent = '';
+            modalError.textContent = '';
+        }
+
+        function toLocalDateTimeString(date) {
+            const pad = function (n) { return String(n).padStart(2, '0'); };
+            return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate())
+                + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+        }
+
+        let calendarWarningTimeout = null;
+        function showCalendarWarning(msg) {
+            let warningEl = document.getElementById('calendarWarning');
+            if (!warningEl) {
+                warningEl = document.createElement('div');
+                warningEl.id = 'calendarWarning';
+                // CORECTAT: Schimbat alert-error în alert-danger
+                warningEl.className = 'alert alert-danger';
+                warningEl.style.marginBottom = '16px';
+                document.getElementById('calendar-container').prepend(warningEl);
+            }
+            warningEl.textContent = msg;
+            warningEl.classList.remove('d-none');
+
+            if (calendarWarningTimeout) clearTimeout(calendarWarningTimeout);
+            calendarWarningTimeout = setTimeout(function () {
+                warningEl.classList.add('d-none');
+            }, 3500);
+        }
+
+        document.getElementById('reservationModal').addEventListener('hidden.bs.modal', clearMessages);
+
+        const calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+            initialView: 'timeGridWeek',
+            slotMinTime: '07:00:00',
+            slotMaxTime: '22:00:00',
+            allDaySlot: false,
+
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+
+            events: '/api/events?roomId=' + roomId,
+
+            selectable: true,
+            selectMirror: true,
+
+            select: function(info){
+                clearMessages();
+
+                let startStr = info.startStr;
+                let endStr = info.endStr;
+
+                if (startStr.length === 10) startStr += "T09:00";
+                if (endStr.length === 10) endStr += "T10:00";
+
+                if (new Date(startStr) < new Date()) {
+                    calendar.unselect();
+                    showCalendarWarning('Nu poți selecta un interval din trecut.');
+                    return;
+                }
+
+                const nowLocal = toLocalDateTimeString(new Date());
+                document.getElementById('start').min = nowLocal;
+                document.getElementById('end').min = nowLocal;
+
+                document.getElementById('start').value = startStr.substring(0, 16);
+                document.getElementById('end').value = endStr.substring(0, 16);
+
+                modal.show();
+                calendar.unselect();
+            },
+        });
+
+        calendar.render();
+
+        // SALVARE REZERVARE
+        document.getElementById('reservationForm').addEventListener('submit', function(e){
+            e.preventDefault();
+            clearMessages();
+
+            const titleVal = document.getElementById('title').value.trim();
+            const participantsVal = document.getElementById('participants').value;
+            const startVal = document.getElementById('start').value;
+            const endVal = document.getElementById('end').value;
+
+            if (!titleVal) {
+                showError('Completează numele meeting-ului.');
+                return;
+            }
+
+            if (!startVal || !endVal) {
+                showError('Selectează ora de start și ora de final.');
+                return;
+            }
+
+            const startDate = new Date(startVal);
+            const endDate = new Date(endVal);
+            const now = new Date();
+
+            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                showError('Data sau ora introdusă nu este validă.');
+                return;
+            }
+
+            if (startDate < now) {
+                showError('Nu poți face o rezervare într-un interval din trecut. Alege o dată și o oră viitoare.');
+                return;
+            }
+
+            if (endDate <= startDate) {
+                showError('Ora de final trebuie să fie după ora de start.');
+                return;
+            }
+
+            const durationMinutes = (endDate - startDate) / 60000;
+            if (durationMinutes < 15) {
+                showError('Rezervarea trebuie să dureze cel puțin 15 minute.');
+                return;
+            }
+            if (durationMinutes > 8 * 60) {
+                showError('Rezervarea nu poate dura mai mult de 8 ore.');
+                return;
+            }
+
+            const participantsNum = parseInt(participantsVal, 10);
+            if (!participantsVal || isNaN(participantsNum) || participantsNum <= 0) {
+                showError('Introdu un număr valid de participanți (cel puțin 1).');
+                return;
+            }
+
+            // CORECTAT: Trimitem participants ca număr, nu ca string text
+            let data = {
+                roomId: roomId,
+                title: titleVal,
+                participants: participantsNum,
+                description: document.getElementById('description').value,
+                start: startVal,
+                end: endVal
+            };
+
+            const token = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+            const header = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+
+            fetch('/api/events/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    [header]: token
+                },
+                body: JSON.stringify(data)
+            })
+                .then(async response => {
+                    if (response.ok) {
+                        calendar.refetchEvents();
+                        showSuccess('Rezervarea a fost salvată cu succes!');
+                        document.getElementById('reservationForm').reset();
+                        setTimeout(function () {
+                            modal.hide();
+                        }, 1200);
+                    } else {
+                        // Aici prindem erorile din backend (ex: "Numărul de participanți depășește capacitatea maximă a sălii!")
+                        const errorMsg = await response.text();
+                        showError(errorMsg || 'Nu am putut salva rezervarea. Încearcă din nou.');
+                    }
+                })
+                .catch(function () {
+                    showError('A apărut o eroare de rețea. Verifică conexiunea și încearcă din nou.');
+                });
+        });
+    });
+</script>
+</body>
+</html>
