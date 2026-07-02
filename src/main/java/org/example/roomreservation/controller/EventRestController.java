@@ -10,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -18,8 +17,8 @@ import java.util.List;
 @AllArgsConstructor
 public class EventRestController {
 
-    ReservationRepository reservationRepository;
-    ReservationService reservationService;
+    private final ReservationRepository reservationRepository;
+    private final ReservationService reservationService;
 
     @GetMapping
     public List<ReservationResponseDTO> getEvents(

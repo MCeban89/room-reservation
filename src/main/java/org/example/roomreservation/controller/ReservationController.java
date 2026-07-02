@@ -2,7 +2,6 @@ package org.example.roomreservation.controller;
 
 import lombok.AllArgsConstructor;
 import org.example.roomreservation.model.dto.ReservationRequestDTO;
-import org.example.roomreservation.repository.ReservationRepository;
 import org.example.roomreservation.service.ReservationService;
 import org.example.roomreservation.service.RoomService;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,18 +22,12 @@ public class ReservationController {
     private final ReservationService reservationService;
     private final RoomService roomService;
 
-    // ================================================================
-    // GET /reservations/my
-    // ================================================================
     @GetMapping("/my")
     public String myReservations(Model model) {
         model.addAttribute("reservations", reservationService.getMyReservations());
         return "reservations/my";
     }
 
-    // ================================================================
-    // GET /reservations/all — doar ADMIN
-    // ================================================================
     @GetMapping("/all")
     @PreAuthorize("hasRole('ADMIN')")
     public String allReservations(Model model) {
@@ -42,9 +35,6 @@ public class ReservationController {
         return "reservations/all";
     }
 
-    // ================================================================
-    // GET /reservations/new?roomId=1&participants=5
-    // ================================================================
     @GetMapping("/new")
     public String newReservationPage(
             @RequestParam Long roomId,
@@ -52,6 +42,7 @@ public class ReservationController {
             @RequestParam(required = false) String startHour,
             @RequestParam(required = false) String duration,
             @RequestParam(required = false) Integer participants,
+            @RequestParam(required = false) String title,
             Model model) {
 
         model.addAttribute("room", roomService.getRoomById(roomId));
@@ -59,14 +50,10 @@ public class ReservationController {
         model.addAttribute("startHour", startHour);
         model.addAttribute("duration", duration);
         model.addAttribute("participants", participants);
+        model.addAttribute("title", title);
         return "reservations/new";
     }
 
-    // ================================================================
-    // POST /reservations
-    // Primește: roomId, date, startHour, endHour (calculat din JS),
-    //           duration, participants, title, notes
-    // ================================================================
     @PostMapping
     public String createReservation(
             @RequestParam Long roomId,
@@ -81,12 +68,10 @@ public class ReservationController {
             Model model) {
 
         try {
-            // Combini data cu orele
             LocalDate localDate = LocalDate.parse(date);
             LocalDateTime startTime = LocalDateTime.of(localDate, LocalTime.parse(startHour));
             LocalDateTime endTime   = LocalDateTime.of(localDate, LocalTime.parse(endHour));
 
-            // Construiești DTO-ul
             ReservationRequestDTO dto = new ReservationRequestDTO();
             dto.setRoomId(roomId);
             dto.setStartTime(startTime);
@@ -102,7 +87,6 @@ public class ReservationController {
             return "redirect:/reservations/my";
 
         } catch (RuntimeException e) {
-            // Sala ocupată, start după end, etc.
             model.addAttribute("error", e.getMessage());
             model.addAttribute("room", roomService.getRoomById(roomId));
             model.addAttribute("date", date);
@@ -113,9 +97,6 @@ public class ReservationController {
         }
     }
 
-    // ================================================================
-    // POST /reservations/{id}/cancel
-    // ================================================================
     @PostMapping("/{id}/cancel")
     public String cancelReservation(
             @PathVariable Long id,
@@ -135,7 +116,6 @@ public class ReservationController {
             redirectAttributes.addFlashAttribute("successMessage", "Check-in realizat cu succes! Ședință plăcută.");
 
         } catch (RuntimeException e) {
-            // Dacă apare o eroare, o trimitem tot către pagina principală ca mesaj de alertă
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/reservations/my";

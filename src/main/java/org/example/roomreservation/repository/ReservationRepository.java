@@ -1,7 +1,6 @@
 package org.example.roomreservation.repository;
 
 import jakarta.transaction.Transactional;
-import org.example.roomreservation.model.dto.ReservationResponseDTO;
 import org.example.roomreservation.model.entity.Reservation;
 import org.example.roomreservation.model.entity.ReservationStatus;
 import org.example.roomreservation.model.entity.User;
@@ -12,7 +11,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
-import java.util.Collection;
 import java.util.List;
 
 @Repository

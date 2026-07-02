@@ -12,7 +12,7 @@ import java.util.List;
 @Service
 @AllArgsConstructor
 public class RoomService {
-    private RoomRepository roomRepository;
+    private final RoomRepository roomRepository;
 
     public List<Room> getRooms()
     {

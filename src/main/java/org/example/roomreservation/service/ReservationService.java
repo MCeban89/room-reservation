@@ -1,6 +1,6 @@
 package org.example.roomreservation.service;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.example.roomreservation.model.dto.ReservationMapper;
 import org.example.roomreservation.model.dto.ReservationRequestDTO;
 import org.example.roomreservation.model.dto.ReservationResponseDTO;
@@ -9,22 +9,26 @@ import org.example.roomreservation.repository.ReservationHistoryRepository;
 import org.example.roomreservation.repository.ReservationRepository;
 import org.example.roomreservation.repository.RoomRepository;
 import org.example.roomreservation.security.SecurityUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class ReservationService {
 
-    private ReservationRepository reservationRepository;
-    private RoomRepository roomRepository;
-    private SecurityUtils securityUtils;
-    private ReservationHistoryRepository historyRepository;
-    private EmailService emailService;
-    private CalendarService calendarService;
-    private QrCodeService qrCodeService;
+    private final ReservationRepository reservationRepository;
+    private final RoomRepository roomRepository;
+    private final SecurityUtils securityUtils;
+    private final ReservationHistoryRepository historyRepository;
+    private final EmailService emailService;
+    private final CalendarService calendarService;
+    private final QrCodeService qrCodeService;
+
+    @Value("${app.base-url}")
+    private String baseUrl;
 
     public List<ReservationResponseDTO> allReservations()
     {
@@ -36,33 +40,28 @@ public class ReservationService {
         User user = securityUtils.getCurrentUser();
 
         List<Reservation> reservations = reservationRepository.findByUser(user);
-
+        reservations.forEach(reservation -> System.out.println(reservation.getTitle()));
         return reservations.stream().map(ReservationMapper::toDto).toList();
     }
 
     public void createReservation(ReservationRequestDTO dto) {
 
-        // 1. Validare: Timpul de început să nu fie în trecut
         if (dto.getStartTime().isBefore(LocalDateTime.now())) {
             throw new IllegalArgumentException("Nu poți face o rezervare în trecut!");
         }
 
-        // 2. Validare NOUĂ: Timpul de final să fie DUPĂ timpul de început
         if (!dto.getEndTime().isAfter(dto.getStartTime())) {
             throw new IllegalArgumentException("Ora de sfârșit trebuie să fie după ora de început!");
         }
 
-        // 3. Extragerea sălii (O singură dată!)
         Room room = roomRepository.findById(dto.getRoomId())
                 .orElseThrow(() -> new RuntimeException("Sala nu a fost găsită!"));
 
-        // 4. Validare NOUĂ: Verificare capacitate sală
-        if (dto.getParticipants() > room.getCapacity()) { // Presupunând că ai `getCapacity()` în entitatea Room
+        if (dto.getParticipants() > room.getCapacity()) {
             throw new IllegalArgumentException("Numărul de participanți (" + dto.getParticipants() +
                     ") depășește capacitatea maximă a sălii (" + room.getCapacity() + " locuri)!");
         }
 
-        // 5. Verificare conflicte de timp în baza de date
         boolean conflict = reservationRepository.existsConflict(
                 dto.getRoomId(), dto.getStartTime(), dto.getEndTime()
         );
@@ -70,10 +69,8 @@ public class ReservationService {
             throw new RuntimeException("Sala nu este disponibilă în acest interval orar!");
         }
 
-        // 6. Preluare utilizator curent
         User user = securityUtils.getCurrentUser();
 
-        // 7. Construirea rezervării (Folosind obiectul 'room' deja extras)
         Reservation reservation = Reservation.builder()
                 .room(room)
                 .title(dto.getTitle())
@@ -88,7 +85,7 @@ public class ReservationService {
         reservationRepository.save(reservation);
 
         // 8. Generare QR Code și eveniment Calendar
-        byte[] qrCode = qrCodeService.generateQrCode("http://localhost:8080/reservations/check-in/" + reservation.getId());
+        byte[] qrCode = qrCodeService.generateQrCode(baseUrl + "/reservations/check-in/" + reservation.getId());
 
         try {
             byte[] icsBytes = calendarService.generateCalendarEvent(
@@ -155,7 +152,7 @@ public class ReservationService {
         }
 
         r.setStatus(ReservationStatus.ATTENDED);
-        ReservationStatus status = r.getStatus();
+
         reservationRepository.save(r);
     }
 

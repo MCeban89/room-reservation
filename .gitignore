@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Operating System Files ###
+.DS_Store
+.DS_Store?
+._*
+**.DS_Store

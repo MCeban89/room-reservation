@@ -1,0 +1,109 @@
+@startuml RoomReservation_ERD
+
+
+skinparam linetype ortho
+skinparam roundcorner 8
+skinparam classAttributeIconSize 0
+
+hide circle
+hide methods
+
+skinparam class {
+    BackgroundColor #F8F9FA
+    BorderColor #495057
+    HeaderBackgroundColor #ADB5BD
+    HeaderFontColor #FFFFFF
+    FontSize 13
+    AttributeFontSize 12
+}
+
+' ============================================================
+' ENUM-URI
+' ============================================================
+
+enum Role {
+    USER
+    ADMIN
+}
+
+enum ReservationStatus {
+    CONFIRMED
+    ATTENDED
+    CANCELLED
+}
+
+' ============================================================
+' ENTITĂȚI
+' ============================================================
+
+entity "users" as User {
+    * **id** : BIGINT <<PK, AUTO_INCREMENT>>
+    --
+    * name : VARCHAR NOT NULL
+    * email : VARCHAR NOT NULL <<UNIQUE>>
+    * password : VARCHAR NOT NULL
+    * role : ENUM(USER, ADMIN) NOT NULL
+      floor : INT
+      department : VARCHAR
+    * enabled : BOOLEAN DEFAULT TRUE
+    * created_at : DATETIME
+}
+
+entity "rooms" as Room {
+    * **id** : BIGINT <<PK, AUTO_INCREMENT>>
+    --
+    * name : VARCHAR NOT NULL
+    * capacity : INT NOT NULL
+    * floor : INT NOT NULL
+      description : VARCHAR
+    * has_projector : BOOLEAN DEFAULT FALSE
+    * has_whiteboard : BOOLEAN DEFAULT FALSE
+    * has_video_conference : BOOLEAN DEFAULT FALSE
+    * active : BOOLEAN DEFAULT FALSE
+}
+
+entity "reservations" as Reservation {
+    * **id** : BIGINT <<PK, AUTO_INCREMENT>>
+    --
+    * user_id : BIGINT <<FK → users.id>>
+    * room_id : BIGINT <<FK → rooms.id>>
+    --
+      title : VARCHAR
+    * start_time : DATETIME NOT NULL
+    * end_time : DATETIME NOT NULL
+    * participants : INT NOT NULL
+    * status : ENUM(CONFIRMED, ATTENDED, CANCELLED) DEFAULT 'CONFIRMED'
+    * created_at : DATETIME
+}
+
+entity "reservation_history" as ReservationHistory {
+    * **id** : BIGINT <<PK, AUTO_INCREMENT>>
+    --
+    * user_id : BIGINT <<FK → users.id>>
+    * room_id : BIGINT <<FK → rooms.id>>
+    --
+    * reservation_date : DATETIME NOT NULL
+    * created_at : DATETIME NOT NULL
+}
+
+' ============================================================
+' RELAȚII
+' ============================================================
+
+' Un User poate avea MULTE Reservations
+User ||--o{ Reservation : "face\n(user_id)"
+
+' O Room poate apărea în MULTE Reservations
+Room ||--o{ Reservation : "este rezervată\n(room_id)"
+
+' Un User poate apărea în MULTE ReservationHistory
+User ||--o{ ReservationHistory : "are istoric\n(user_id)"
+
+' O Room poate apărea în MULTE ReservationHistory
+Room ||--o{ ReservationHistory : "apare în istoric\n(room_id)"
+
+' Enum-uri asociate
+User }o--|| Role : "are rolul"
+Reservation }o--|| ReservationStatus : "are statusul"
+
+@enduml

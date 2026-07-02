@@ -73,7 +73,6 @@ public class RoomController {
 
         // Populează formularul cu valorile existente
         RoomRequestDTO form = new RoomRequestDTO();
-        form.setName(room.getName());
         form.setCapacity(room.getCapacity());
         form.setFloor(room.getFloor());
         form.setDescription(room.getDescription());

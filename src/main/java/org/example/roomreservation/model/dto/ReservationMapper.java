@@ -19,6 +19,7 @@ public class ReservationMapper {
                 .userEmail(reservation.getUser().getEmail())
                 .userName(reservation.getUser().getName())
                 .status(reservation.getStatus())
+                .title(reservation.getTitle())
                 .build();
     }
 }
